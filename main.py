@@ -10,6 +10,7 @@ import os
 import warnings
 import lorem
 import threading
+import yaml
 
 
 
@@ -52,12 +53,12 @@ def login_to_VK(driver, username, password, iteration):
     check_captcha(driver, 'vkc__CaptchaPopup__popupContainer')
     continue_btn = driver.find_element(By.CLASS_NAME, 'vkuiButton__content')
     continue_btn.click()
-
-    with open(f'cookies/cookies({iteration}).txt','w') as file:
-        json.dump(driver.get_cookies(), file)
-        logging.info(f'Cookies saved.)')
+    if save_cookies(driver, iteration):
+        logging.info(f'Login successful.')
+    else:
+        logging.error('Incorrect loggin or password')
+        driver.quit()
     
-    logging.info(f'Login successful.)')
 
 def is_cookies_file_valid(file_path):
     if not os.path.exists(file_path):
@@ -65,7 +66,18 @@ def is_cookies_file_valid(file_path):
     if os.stat(file_path).st_size == 0:
         return False
     return True
-    
+
+def save_cookies(driver, iteration):
+    with open(f'cookies/cookies({iteration}).txt','w') as file:
+        cookies = driver.get_cookies()
+        if cookies[0]['domain'] == 'web.vk.me':
+            json.dump(cookies, file)
+            logging.info(f'Cookies saved.')
+            return True
+        else:
+            logging.warning('Cookies wasnt saved')
+            return False
+
 def load_cookies(driver, filename):
     with open(filename, "r") as file:
         cookies = json.load(file)
@@ -99,7 +111,10 @@ def send_message(driver):
     except Exception as e:
         logging.warning(f"Error sending message: {e} ")
     
-
+def get_config(path)->dict:
+    with open(path, 'r') as file:
+        data = yaml.safe_load(file)
+    return data
 
 def worker(i):
     try:
@@ -115,7 +130,7 @@ def worker(i):
             start_event.set()
             while True:
                 send_message(driver)
-                time.sleep(600)
+                time.sleep(get_config('config.yaml')['delay'])
         else:
             driver.get("https://web.vk.me/")
             time.sleep(2)
@@ -126,7 +141,7 @@ def worker(i):
             start_event.set()
             while True:
                 send_message(driver)
-                time.sleep(600)
+                time.sleep(get_config('config.yaml')['delay'])
 
     except Exception as e:
         logging.warning(f"Error in thread {i}: {e}")
