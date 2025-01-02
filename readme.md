@@ -1,4 +1,4 @@
-Перед запуском :
+запуск :
     1) заходите в cmd
     2) cd путь/к/скрпту
     3) pip install -r requirements.txt
